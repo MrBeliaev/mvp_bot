@@ -37,17 +37,18 @@ export class TelegramService implements OnModuleInit {
 
         if (ref) {
           const referrerId = ref.split('_')[1];
-          if (referrerId == userForApi.telegramId) {
-            throw new Error('You cannot invite yourself');
+          if (referrerId != userForApi.telegramId) {
+            const referrer = await appService.findByTelegramId(referrerId);
+            userForApi['referrer'] = referrerId;
+            await appService.updateUser(referrerId, {
+              friendsCount: referrer.friendsCount + 1,
+            });
+            await ctx.reply(
+              `You were invited by ${referrer.username ? referrer.username : referrer.firstName}!`,
+            );
+          } else {
+            await ctx.reply('You cannot invite yourself!');
           }
-          const referrer = await appService.findByTelegramId(referrerId);
-          userForApi['referrer'] = referrerId;
-          await appService.updateUser(referrerId, {
-            friendsCount: referrer.friendsCount + 1,
-          });
-          await ctx.reply(
-            `You were invited by ${referrer.username ? referrer.username : referrer.firstName}!`,
-          );
         }
         await appService.createUser(userForApi);
       } catch (error) {
@@ -86,7 +87,7 @@ export class TelegramService implements OnModuleInit {
   }
 
   async onModuleInit() {
-    await this.setWebhook();
+    // await this.setWebhook();
     await this.bot.telegram.setMyCommands([
       { command: '/start', description: 'Just start it' },
     ]);

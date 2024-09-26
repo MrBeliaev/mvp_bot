@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { UserRepositoryInterface } from './db/repositories/users.repository.interface';
 import { UserEntity } from './db/user.entity';
 import { CreateUserDto } from './dtos/create-user.dto';
-import { UpdateUserDto } from './dtos/updarte-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
 
 @Injectable()
 export class AppService {
@@ -25,13 +25,24 @@ export class AppService {
   }
 
   async createUser(user: Partial<CreateUserDto>) {
-    const existingUser = await this.findByTelegramId(user.telegramId);
+    try {
+      const existingUser = await this.findByTelegramId(user.telegramId);
 
-    if (existingUser) {
-      throw new Error('User already exists');
+      if (existingUser) {
+        console.log(`User with telegramId ${user.telegramId} already exists.`);
+        throw new Error('User already exists');
+      }
+
+      return await this.usersRepository.save(user);
+    } catch (error) {
+      if (error.code === '23505') {
+        // Unique constraint violation
+        console.error(`Duplicate key error: ${error.detail}`);
+        throw new Error('User already exists');
+      }
+      console.error(`Error creating user: ${error.message}`);
+      throw error;
     }
-
-    await this.usersRepository.save(user);
   }
 
   async updateUser(
