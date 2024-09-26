@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres
+    container_name: postgres
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    ports:
+      - '5432:5432'
+    networks:
+      - web
+
+  backend:
+    image: node:20.17.0
+    working_dir: /app
+    env_file:
+      - ./.env
+    command: bash -c "
+      yarn install
+      && yarn build
+      && yarn start"
+    depends_on:
+      - postgres
+    volumes:
+      - .:/app
+    ports:
+      - '3000:3000'
+    networks:
+      - web
+
+    nginx:
+      build: nginx
+      ports:
+        - "80:80"
+        - "443:443"
+      networks:
+        - web
+      volumes:
+        - ./certbot/conf:/etc/letsencrypt
+        - ./certbot/www:/var/www/certbot
+      command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+    certbot:
+      image: certbot/certbot
+      volumes:
+        - ./certbot/conf:/etc/letsencrypt
+        - ./certbot/www:/var/www/certbot
+      entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+
+networks:
+  web:
