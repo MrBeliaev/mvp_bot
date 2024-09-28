@@ -65,7 +65,7 @@ export class TelegramService implements OnModuleInit {
         Markup.inlineKeyboard([
           Markup.button.url(
             'Send RefLink to Friends',
-            getInviteLink(ctx.from.id),
+            `https://t.me/share/url?url=${getInviteLink(ctx.from.id)}`,
           ),
         ]),
       );
